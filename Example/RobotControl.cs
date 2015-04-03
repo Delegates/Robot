@@ -9,7 +9,7 @@ using MapHelper;
 using RepairTheStarship.Sensors;
 
 // Всё норм
-//qweeeee
+//все
 namespace Robot
 { 
 
