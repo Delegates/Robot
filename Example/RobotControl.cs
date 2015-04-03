@@ -7,11 +7,16 @@ using CVARC.Basic.Controllers;
 using CVARC.Network;
 using MapHelper;
 using RepairTheStarship.Sensors;
+<<<<<<< HEAD
 
 
 
+=======
+// Я НЕ НАВИЖУ ГИТХАБ
+>>>>>>> parent of ffae464... Revert "123"
 namespace Robot
 { 
+    //ненавижу уродов ,которые придумали задачи
     //я тоже
     internal class RobotControl
 	{
