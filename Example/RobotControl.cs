@@ -7,7 +7,7 @@ using CVARC.Basic.Controllers;
 using CVARC.Network;
 using MapHelper;
 using RepairTheStarship.Sensors;
-
+// Я НЕ НАВИЖУ ГИТХАБ
 namespace Robot
 {
     internal class RobotControl
