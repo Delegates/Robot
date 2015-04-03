@@ -8,8 +8,7 @@ using CVARC.Network;
 using MapHelper;
 using RepairTheStarship.Sensors;
 
-// Всё норм
-//все
+
 namespace Robot
 { 
 

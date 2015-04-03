@@ -6,9 +6,6 @@ using System.Threading.Tasks;
 
 namespace Robot
 {
-    /// <summary>
-    /// BOMJ
-    /// </summary>
     class Test
     {
     }
