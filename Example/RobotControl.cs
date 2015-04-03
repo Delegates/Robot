@@ -11,7 +11,7 @@ using RepairTheStarship.Sensors;
 
 namespace Robot
 { 
-
+    //анапа
     internal class RobotControl
 	{
 		private static readonly ClientSettings Settings = new ClientSettings
