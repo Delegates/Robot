@@ -8,8 +8,11 @@ using CVARC.Network;
 using MapHelper;
 using RepairTheStarship.Sensors;
 
+
+
 namespace Robot
-{
+{ 
+    //я тоже
     internal class RobotControl
 	{
 		private static readonly ClientSettings Settings = new ClientSettings
