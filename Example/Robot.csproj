@@ -7,7 +7,7 @@
     <ProjectGuid>{B575BFB9-B7E3-4A59-B375-233575AF1F9A}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Example</RootNamespace>
+    <RootNamespace>Robot</RootNamespace>
     <AssemblyName>Example</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
