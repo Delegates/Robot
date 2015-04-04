@@ -1,0 +1,8 @@
+System.Net.Sockets.SocketException (0x80004005): Обычно разрешается только одно использование адреса сокета (протокол/сетевой адрес/порт)
+   в System.Net.Sockets.Socket.DoBind(EndPoint endPointSnapshot, SocketAddress socketAddress)
+   в System.Net.Sockets.Socket.Bind(EndPoint localEP)
+   в System.Net.Sockets.TcpListener.Start(Int32 backlog)
+   в System.Net.Sockets.TcpListener.Start()
+   в CVARC.Basic.Core.Participants.ParticipantsServer..ctor(String competitionsName)
+   в CVARC.Network.SettingsProvider.Get(String[] args)
+   в CVARC.Network.Program.Main(String[] args)
