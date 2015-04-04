@@ -51,6 +51,7 @@ namespace Robot
 
 		    while (true)
 		    {
+                robot.MoveToMiddle(map);
 		        Point target = null; // 1 деталь
 		        DetailType detail;
 

@@ -19,6 +19,7 @@ namespace Robot
     }
     class Robot
     {
+
         public Robot(Server<PositionSensorsData> server, PositionData info)
         {
             Info = info;
@@ -139,6 +140,18 @@ namespace Robot
             var target = pathTuple.Item1;
             sensorsData = MoveTo(path);
             sensorsData = Server.SendCommand(new Command { Action = CommandAction.Release, Time = 1 });
+            return sensorsData;
+        }
+        public PositionSensorsData MoveToMiddle(MapHelper.Map map)
+        {
+            PositionSensorsData sensorsData = null;
+            var robotPosition = map.GetDiscretePosition(Coordinate.X,Coordinate.Y);
+            var middlePosition = new Point(robotPosition.X*50-25,robotPosition.Y*50-25);
+            var angle = Math.Atan2(robotPosition.Y - middlePosition.Y, middlePosition.X - robotPosition.X)*180/Math.PI;
+            TurnTo(angle);
+            sensorsData = Server.SendCommand(new Command { LinearVelocity = PointExtension.VectorLength(middlePosition, robotPosition), Time = 1 });
+            //var angle = Math.Atan((rocket.Location.Y - target.Y) / (target.X - rocket.Location.X));
+            //if (rocket.Location.X > target.X) angle = Math.PI + angle;      
             return sensorsData;
         }
     }
