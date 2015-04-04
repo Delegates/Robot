@@ -40,7 +40,7 @@ namespace Robot
 
 	
 		        //Console.WriteLine(element);
-            var robot = new RobotMove(server, helloPackageAns.SensorsData.Position.PositionsData[helloPackageAns.RealSide == Side.Left ? 0 : 1]); // создание класса робот
+            var robot = new Robot(server, helloPackageAns.SensorsData.Position.PositionsData[helloPackageAns.RealSide == Side.Left ? 0 : 1]); // создание класса робот
 
 		    foreach (var bomj in helloPackageAns.SensorsData.BuildMap().Details) // координаты деталей(юзал для проверки)
 		        Console.WriteLine(bomj.Type);
@@ -51,19 +51,23 @@ namespace Robot
                 Console.WriteLine(element.Type);
 
             var details = new HashSet<string> { "GreenDetail", "BlueDetail", "RedDetail" }; // список деталей
-		    Point target = null; // 1 деталь
-		    foreach (var element in map.Details) // поиск ближайшей детали
-		        if (details.Contains(element.Type) && (target == null ||
-		                                               PointExtension.VectorLength(robot.RobotCoordinate, target) >
-		                                               PointExtension.VectorLength(robot.RobotCoordinate,element.AbsoluteCoordinate)))
-		            target = new Point(element.AbsoluteCoordinate.X, element.AbsoluteCoordinate.Y);
 
-		    var path = PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition),
-		        map.GetDiscretePosition(new PositionData(new Frame3D(target.X, target.Y, 0)))); // поиск пути к ближайшей детали
-		    foreach (var element in path)
-		        Console.WriteLine(element);
-            sensorsData = robot.RobotMoveTo(path.Take(path.Length - 1).ToArray());
-            sensorsData = robot.RobotTake(path[path.Length - 1],target);
+            Point target = null; // 1 деталь
+		    DetailType detail;
+
+		    sensorsData = robot.TakeClosestDetail(map, details, out detail);
+            //foreach (var element in map.Details) // поиск ближайшей детали
+            //    if (details.Contains(element.Type) && (target == null ||
+            //                                           PointExtension.VectorLength(robot.Coordinate, target) >
+            //                                           PointExtension.VectorLength(robot.Coordinate,element.AbsoluteCoordinate)))
+            //        target = new Point(element.AbsoluteCoordinate.X, element.AbsoluteCoordinate.Y);
+
+            //var path = PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition),
+            //    map.GetDiscretePosition(new PositionData(new Frame3D(target.X, target.Y, 0)))); // поиск пути к ближайшей детали
+            //foreach (var element in path)
+            //    Console.WriteLine(element);
+            //sensorsData = robot.MoveTo(path.Take(path.Length - 1).ToArray());
+            //sensorsData = robot.Take(path[path.Length - 1],target);
 
             
 		     map.Update(sensorsData);
@@ -71,19 +75,19 @@ namespace Robot
 		    target = null;
              foreach (var element in map.Walls) // поиск ближайшей детали
 		        if (walls.Contains(element.Type) && (target == null ||
-		                                               PointExtension.VectorLength(robot.RobotCoordinate, target) >
-		                                               PointExtension.VectorLength(robot.RobotCoordinate,element.AbsoluteCoordinate)))
+		                                               PointExtension.VectorLength(robot.Coordinate, target) >
+		                                               PointExtension.VectorLength(robot.Coordinate,element.AbsoluteCoordinate)))
 		            target = new Point(element.AbsoluteCoordinate.X, element.AbsoluteCoordinate.Y);
-             path = PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition),
+             var path = PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition),
                  map.GetDiscretePosition(new PositionData(new Frame3D(target.X, target.Y, 0)))); // поиск пути к ближайшей детали
              foreach (var element in path)
                  Console.WriteLine(element);
-             sensorsData = robot.RobotMoveTo(path);
+             sensorsData = robot.MoveTo(path);
              sensorsData = server.SendCommand(new Command { Action = CommandAction.Release, Time = 1 });
-            // sensorsData = robot.RobotTake(path[path.Length - 1]);
+            // sensorsData = robot.Take(path[path.Length - 1]);
 
 
-            //PathSearcher.FindPath(helloPackageAns.SensorsData.BuildMap(), robot.RobotCoordinate, )//new Point(3, 1));
+            //PathSearcher.FindPath(helloPackageAns.SensorsData.BuildMap(), robot.Coordinate, )//new Point(3, 1));
 
 			//Так вы можете отправлять различные команды. По результатам выполнения каждой команды, вы получите sensorsData, 
 			//который содержит информацию о происходящем на поле
