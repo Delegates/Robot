@@ -41,13 +41,17 @@ namespace Robot
         public void RobotTurnTo(double angle)
         {
             PositionSensorsData sensorsData = null;
+            if (angle < -Math.PI) angle += 2 * Math.PI;
+            if (angle > Math.PI) angle -= 2 * Math.PI;
             Console.WriteLine(angle + " " + RobotAngle);
             //Console.WriteLine(angle - RobotAngle < double.Epsilon);
-            if (Math.Abs(angle - RobotAngle) < 1e-2) return;
+           if (Math.Abs(angle - RobotAngle) < 1e-2) return;
+            
             sensorsData = Server.SendCommand(new Command { AngularVelocity = Angle.FromGrad(90*Math.Sign(angle - RobotAngle)), Time = Math.Abs(angle - RobotAngle)/90 });
-            RobotInfo = sensorsData.Position.PositionsData[RobotId];
+            sensorsData = Server.SendCommand(new Command { LinearVelocity = 25, Time = 1 });   
+            RobotInfo = sensorsData.Position.PositionsData[RobotId];           
         }
-        public void RobotMoveTo(Direction[] directions)
+        public PositionSensorsData RobotMoveTo(Direction[] directions)
         {
             PositionSensorsData sensorsData = null;
             for (int i = 0; i < directions.Length; i++)
@@ -56,6 +60,20 @@ namespace Robot
                 sensorsData = Server.SendCommand(new Command { LinearVelocity = 50, Time = 1 });
                 RobotInfo = sensorsData.Position.PositionsData[RobotId];
             }
+            return sensorsData;
         }
+
+        public PositionSensorsData RobotTake(Direction direction,Point target)
+        {
+            PositionSensorsData sensorsData = null;
+            RobotTurnTo(direction.ToAngle());
+            var distance = PointExtension.VectorLength(RobotCoordinate, target)-20;
+            sensorsData = Server.SendCommand(new Command { LinearVelocity = distance, Time = 1 });            
+            sensorsData = Server.SendCommand(new Command { Action = CommandAction.Grip, Time = 1 });
+            sensorsData = Server.SendCommand(new Command { LinearVelocity = -distance, Time = 1 });
+            RobotInfo = sensorsData.Position.PositionsData[RobotId];
+            return sensorsData;
+        }
+
     }
 }
