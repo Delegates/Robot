@@ -25,7 +25,7 @@ namespace Robot
             Server = server;
         }
         private ClientBase.Server<PositionSensorsData> Server { get; set; }
-        private PositionData Info { get; set; }
+        public PositionData Info { get; private set; }
 
         private int Id
         {
@@ -44,15 +44,18 @@ namespace Robot
 
         public void TurnTo(double angle)
         {
+            var resAngle = angle - Angle;
             PositionSensorsData sensorsData = null;
-            if (angle < -180) angle += 360;
-            if (angle > 180) angle -= 360;
+            if (resAngle < -180) resAngle += 360;
+            if (resAngle > 180) resAngle -= 360;
             Console.WriteLine(angle + " " + Angle);
-            //Console.WriteLine(angle - Angle < double.Epsilon);
-           if (Math.Abs(angle - Angle) < 1e-2) return;
-            
-            sensorsData = Server.SendCommand(new Command { AngularVelocity = AIRLab.Mathematics.Angle.FromGrad(90*Math.Sign(angle - Angle)), Time = Math.Abs(angle - Angle)/90 });
-            //sensorsData = Server.SendCommand(new Command { LinearVelocity = 25, Time = 1 });   
+            if (Math.Abs(resAngle) < 0.5) return;
+            sensorsData =
+                Server.SendCommand(new Command
+                {
+                    AngularVelocity = AIRLab.Mathematics.Angle.FromGrad(90 * Math.Sign(resAngle)),
+                    Time = Math.Abs(resAngle) / 90
+                });
             Info = sensorsData.Position.PositionsData[Id];           
         }
         public PositionSensorsData MoveTo(Direction[] directions)
@@ -87,27 +90,56 @@ namespace Robot
                 {"RedDetail", DetailType.Red},
                 {"BlueDetail", DetailType.Blue}
             };
+            //Point target = null;// ближайшая деталь
             detailType = DetailType.Red;
             PositionSensorsData sensorsData = null;
-            Point target = null; // ближайшая деталь
-            foreach (var element in map.Details) // поиск ближайшей детали
-                if (detailsType.Contains(element.Type) && (target == null ||
-                                                           PointExtension.VectorLength(Coordinate, target) >
-                                                           PointExtension.VectorLength(Coordinate,
-                                                               element.AbsoluteCoordinate)))
-                {
-                    target = new Point(element.AbsoluteCoordinate.X, element.AbsoluteCoordinate.Y);
-                    detailType = typeDictionary[element.Type];
-                }
-            if (target == null)
+
+            var pathTuple = map
+                .Details.Select(detail => Tuple.Create(detail,PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition),
+                detail.DiscreteCoordinate)))
+                .OrderBy(tuple =>tuple.Item2.Length)
+                .FirstOrDefault();
+            
+            if (pathTuple == null)
                 Server.Exit();
-            var path = PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition),
-                map.GetDiscretePosition(new PositionData(new Frame3D(target.X, target.Y, 0)))); // поиск пути к ближайшей детали
+            var path = pathTuple.Item2;
+            var target = pathTuple.Item1.AbsoluteCoordinate;
+            
+            
+
+            detailType = typeDictionary[pathTuple.Item1.Type];
+             // поиск пути к ближайшей детали
             sensorsData = MoveTo(path.Take(path.Length - 1).ToArray());
+            if (path.Length == 0) sensorsData = Server.SendCommand(new Command { Action = CommandAction.Grip, Time = 1 });
+            else
             sensorsData = Take(path[path.Length - 1], target);
             Info = sensorsData.Position.PositionsData[Id];
             return sensorsData;
         }
 
+        public PositionSensorsData MoveToClosestWall(MapHelper.Map map, DetailType detailType)
+        {
+            PositionSensorsData sensorsData = null;
+
+            var dictionaryOfWalls = new Dictionary<DetailType, HashSet<string>>
+            {
+                {DetailType.Red, new HashSet<string> {"VerticalRedSocket", "HorizontalRedSocket"}},
+                {DetailType.Green, new HashSet<string> {"VerticalGreenSocket", "HorizontalGreenSocket"}},
+                {DetailType.Blue, new HashSet<string> {"VerticalBlueSocket", "HorizontalBlueSocket"}}
+            };
+
+            Tuple<Point, Direction[]> pathTuple = map.Walls
+                .Where(wall => dictionaryOfWalls[detailType].Contains(wall.Type))
+                .Select(wall => Tuple.Create(wall.AbsoluteCoordinate, PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition),
+                 wall.DiscreteCoordinate)))
+                .OrderBy(tuple => tuple.Item2.Length)
+                .FirstOrDefault();
+
+            var path = pathTuple.Item2;
+            var target = pathTuple.Item1;
+            sensorsData = MoveTo(path);
+            sensorsData = Server.SendCommand(new Command { Action = CommandAction.Release, Time = 1 });
+            return sensorsData;
+        }
     }
 }

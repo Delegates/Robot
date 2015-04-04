@@ -10,21 +10,23 @@ using CVARC.Network;
 using MapHelper;
 using RepairTheStarship.Sensors;
 using System.Linq;
-
+using SlimDX.X3DAudio;
 
 
 namespace Robot
 { 
-    //анапа
+    
+    
     internal class RobotControl
-	{
+	{ 
+        static Random rnd = new Random(DateTime.Now.Millisecond);
 		private static readonly ClientSettings Settings = new ClientSettings
-		{
-			Side = Side.Left, //Переключив это поле, можно отладить алгоритм для левой или правой стороны, а также для произвольной стороны, назначенной сервером
-			LevelName = LevelName.Level1, //Задается уровень, в котором вы хотите принять участие
-            MapNumber = 1 //Задавая различные значения этого поля, вы можете сгенерировать различные случайные карты
+		{           
+			Side = Side.Random, //Переключив это поле, можно отладить алгоритм для левой или правой стороны, а также для произвольной стороны, назначенной сервером
+			LevelName = LevelName.Level1, //Задается уровень, в котором вы хотите принять участие            
+            MapNumber = rnd.Next()//Задавая различные значения этого поля, вы можете сгенерировать различные случайные карты
 		};
-
+        
 		private static void Main(string[] args)
 		{
 			var server = new CvarcClient(args, Settings).GetServer<PositionSensorsData>();
@@ -37,77 +39,33 @@ namespace Robot
 			Console.WriteLine("Your Side: {0}", helloPackageAns.RealSide); 
 
 			PositionSensorsData sensorsData = null;
-
-	
-		        //Console.WriteLine(element);
+		   
             var robot = new Robot(server, helloPackageAns.SensorsData.Position.PositionsData[helloPackageAns.RealSide == Side.Left ? 0 : 1]); // создание класса робот
 
 		    foreach (var bomj in helloPackageAns.SensorsData.BuildMap().Details) // координаты деталей(юзал для проверки)
 		        Console.WriteLine(bomj.Type);
 
             var map = helloPackageAns.SensorsData.BuildMap();
-
-            foreach (var element in map.Walls)
-                Console.WriteLine(element.Type);
-
+	
             var details = new HashSet<string> { "GreenDetail", "BlueDetail", "RedDetail" }; // список деталей
 
-            Point target = null; // 1 деталь
-		    DetailType detail;
+		    while (true)
+		    {
+		        Point target = null; // 1 деталь
+		        DetailType detail;
 
-		    sensorsData = robot.TakeClosestDetail(map, details, out detail);
-            //foreach (var element in map.Details) // поиск ближайшей детали
-            //    if (details.Contains(element.Type) && (target == null ||
-            //                                           PointExtension.VectorLength(robot.Coordinate, target) >
-            //                                           PointExtension.VectorLength(robot.Coordinate,element.AbsoluteCoordinate)))
-            //        target = new Point(element.AbsoluteCoordinate.X, element.AbsoluteCoordinate.Y);
-
-            //var path = PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition),
-            //    map.GetDiscretePosition(new PositionData(new Frame3D(target.X, target.Y, 0)))); // поиск пути к ближайшей детали
-            //foreach (var element in path)
-            //    Console.WriteLine(element);
-            //sensorsData = robot.MoveTo(path.Take(path.Length - 1).ToArray());
-            //sensorsData = robot.Take(path[path.Length - 1],target);
-
-            
-		     map.Update(sensorsData);
-             var walls = new HashSet<string> { "VerticalRedSocket", "HorizontalRedSocket" };
-		    target = null;
-             foreach (var element in map.Walls) // поиск ближайшей детали
-		        if (walls.Contains(element.Type) && (target == null ||
-		                                               PointExtension.VectorLength(robot.Coordinate, target) >
-		                                               PointExtension.VectorLength(robot.Coordinate,element.AbsoluteCoordinate)))
-		            target = new Point(element.AbsoluteCoordinate.X, element.AbsoluteCoordinate.Y);
-             var path = PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition),
-                 map.GetDiscretePosition(new PositionData(new Frame3D(target.X, target.Y, 0)))); // поиск пути к ближайшей детали
-             foreach (var element in path)
-                 Console.WriteLine(element);
-             sensorsData = robot.MoveTo(path);
-             sensorsData = server.SendCommand(new Command { Action = CommandAction.Release, Time = 1 });
-            // sensorsData = robot.Take(path[path.Length - 1]);
-
-
-            //PathSearcher.FindPath(helloPackageAns.SensorsData.BuildMap(), robot.Coordinate, )//new Point(3, 1));
+		        sensorsData = robot.TakeClosestDetail(map, details, out detail);
+		        map.Update(sensorsData);
+		        sensorsData = robot.MoveToClosestWall(map, detail);
+		        map.Update(sensorsData);
+		    }
+		    
 
 			//Так вы можете отправлять различные команды. По результатам выполнения каждой команды, вы получите sensorsData, 
 			//который содержит информацию о происходящем на поле
 			//sensorsData = server.SendCommand(new Command { AngularVelocity = Angle.FromGrad(-90), Time = 1 });
-		    //var a = helloPackageAns.SensorsData.MapSensor;
-            //RepairTheStarship.Sensors.MapSensorData 
-            //var mapSensor = sensorsData.MapSensor;
-		    //var f = sensorsData.Position.PositionsData[0];
-            //Console.WriteLine(sensorsData.Position.PositionsData[helloPackageAns.RealSide == Side.Left ? 0 : 1].X + " " + sensorsData.Position.PositionsData[helloPackageAns.RealSide == Side.Left ? 0 : 1].Y);
-            //Console.WriteLine("------------------");
-            //var a = helloPackageAns.SensorsData.BuildMap();
-            //foreach (var element in a.Details)
-            //    Console.WriteLine(element);
-            //Console.WriteLine(helloPackageAns.SensorsData.MapSensor.MapItems.GetLength(0));
-            //foreach (var element in sensorsData.MapSensor.MapItems)
-            //    Console.WriteLine(element);
-            //var d = PathSearcher.FindPath(a, a.GetDiscretePosition(a.CurrentPosition), a.Details[0].DiscreteCoordinate);
-            //foreach (var element in d)
-                //Console.WriteLine(element);
-            //new Command({})
+		    
+            
             //sensorsData = server.SendCommand(new Command { LinearVelocity = 50, Time = 1 });
             //sensorsData = server.SendCommand(new Command { Action = CommandAction.Grip, Time = 1 });
             //sensorsData = server.SendCommand(new Command { LinearVelocity = -50, Time = 1 });
@@ -120,6 +78,6 @@ namespace Robot
 			//Используйте эту команду в конце кода для того, чтобы в режиме отладки все окна быстро закрылись, когда вы откатали алгоритм.
 			//Если вы забудете это сделать, сервер какое-то время будет ожидать команд от вашего отвалившегося клиента. 
 			server.Exit();
-		}
+		}      
 	}
 }
