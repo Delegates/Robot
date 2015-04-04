@@ -38,14 +38,14 @@ namespace Robot
 
 	
 		        //Console.WriteLine(element);
-            var robot = new RobotMove(server, helloPackageAns.SensorsData.Position.PositionsData[helloPackageAns.RealSide == Side.Left ? 0 : 1]);
+            var robot = new RobotMove(server, helloPackageAns.SensorsData.Position.PositionsData[helloPackageAns.RealSide == Side.Left ? 0 : 1]); // создание класса робот
 
-		    foreach (var bomj in helloPackageAns.SensorsData.BuildMap().Details)
+		    foreach (var bomj in helloPackageAns.SensorsData.BuildMap().Details) // координаты деталей(юзал для проверки)
 		        Console.WriteLine(bomj.Type);
 
-            var details = new HashSet<string> { "GreenDetail", "BlueDetail", "RedDetail" };
-		    Point target = null;
-            foreach (var element in helloPackageAns.SensorsData.BuildMap().Details)
+            var details = new HashSet<string> { "GreenDetail", "BlueDetail", "RedDetail" }; // список деталей
+		    Point target = null; // 1 деталь
+            foreach (var element in helloPackageAns.SensorsData.BuildMap().Details) // поиск ближайшей детали
                 if (details.Contains(element.Type) && (target == null ||
                                                       Math.Sqrt(Math.Pow(robot.RobotCoordinate.X - target.X, 2) +
                                                                 Math.Pow(robot.RobotCoordinate.Y - target.Y, 2)) >
@@ -55,7 +55,7 @@ namespace Robot
 
             var map = helloPackageAns.SensorsData.BuildMap();
 		    var path = PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition),
-		        map.GetDiscretePosition(new PositionData(new Frame3D(target.X, target.Y, 0))));
+		        map.GetDiscretePosition(new PositionData(new Frame3D(target.X, target.Y, 0)))); // поиск пути к ближайшей детали
 		    foreach (var element in path)
 		        Console.WriteLine(element);
 		    robot.RobotMoveTo(path);
