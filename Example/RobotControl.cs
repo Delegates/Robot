@@ -22,9 +22,9 @@ namespace Robot
         //static Random rnd = new Random(DateTime.Now.Millisecond);
 		private static readonly ClientSettings Settings = new ClientSettings
 		{           
-			Side = Side.Left, //Переключив это поле, можно отладить алгоритм для левой или правой стороны, а также для произвольной стороны, назначенной сервером
+			Side = Side.Right, //Переключив это поле, можно отладить алгоритм для левой или правой стороны, а также для произвольной стороны, назначенной сервером
 			LevelName = LevelName.Level1, //Задается уровень, в котором вы хотите принять участие            
-            MapNumber = 105//Задавая различные значения этого поля, вы можете сгенерировать различные случайные карты
+            MapNumber = 198//Задавая различные значения этого поля, вы можете сгенерировать различные случайные карты
 		};
         
 		private static void Main(string[] args)
