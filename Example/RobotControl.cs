@@ -19,12 +19,12 @@ namespace Robot
     
     internal class RobotControl
 	{ 
-        static Random rnd = new Random(DateTime.Now.Millisecond);
+        //static Random rnd = new Random(DateTime.Now.Millisecond);
 		private static readonly ClientSettings Settings = new ClientSettings
 		{           
-			Side = Side.Random, //Переключив это поле, можно отладить алгоритм для левой или правой стороны, а также для произвольной стороны, назначенной сервером
+			Side = Side.Left, //Переключив это поле, можно отладить алгоритм для левой или правой стороны, а также для произвольной стороны, назначенной сервером
 			LevelName = LevelName.Level1, //Задается уровень, в котором вы хотите принять участие            
-            MapNumber = rnd.Next()//Задавая различные значения этого поля, вы можете сгенерировать различные случайные карты
+            MapNumber = 105//Задавая различные значения этого поля, вы можете сгенерировать различные случайные карты
 		};
         
 		private static void Main(string[] args)
@@ -49,17 +49,19 @@ namespace Robot
 	
             var details = new HashSet<string> { "GreenDetail", "BlueDetail", "RedDetail" }; // список деталей
 
-		    while (true)
-		    {
-                robot.MoveToMiddle(map);
-		        Point target = null; // 1 деталь
-		        DetailType detail;
+            while (true)
+            {
+                Console.WriteLine("зашел");
+              sensorsData = robot.MoveToMiddle(map);                
+              map.Update(sensorsData);
+              Point target = null; // 1 деталь
+              DetailType detail;
 
-		        sensorsData = robot.TakeClosestDetail(map, details, out detail);
-		        map.Update(sensorsData);
-		        sensorsData = robot.MoveToClosestWall(map, detail);
-		        map.Update(sensorsData);
-		    }
+              sensorsData = robot.TakeClosestDetail(map, details, out detail);
+              map.Update(sensorsData);
+              sensorsData = robot.MoveToClosestWall(map, detail);
+              map.Update(sensorsData);
+            }
 		    
 
 			//Так вы можете отправлять различные команды. По результатам выполнения каждой команды, вы получите sensorsData, 
