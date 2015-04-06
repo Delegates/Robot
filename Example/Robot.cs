@@ -18,8 +18,32 @@ namespace Robot
     {
         Red, Green, Blue
     }
+
+
     class Robot
     {
+        private static readonly Dictionary<Direction, Point> dictionaryOfDirection = new Dictionary<Direction, Point>()
+            {
+                {Direction.Up, new Point(-25,0)},
+                {Direction.Down, new Point(-25, -50)},
+                {Direction.Left, new Point(-50, -25)},
+                {Direction.Right, new Point(0, -25)},
+                {Direction.No, new Point(-25, -25)},
+            };
+
+        private static readonly Dictionary<string, DetailType> typeDictionary = new Dictionary<string, DetailType>
+        {
+            {"GreenDetail", DetailType.Green},
+            {"RedDetail", DetailType.Red},
+            {"BlueDetail", DetailType.Blue}
+        };
+
+        private static readonly Dictionary<DetailType, HashSet<string>> dictionaryOfWalls = new Dictionary<DetailType, HashSet<string>>
+        {
+            {DetailType.Red, new HashSet<string> {"VerticalRedSocket", "HorizontalRedSocket"}},
+            {DetailType.Green, new HashSet<string> {"VerticalGreenSocket", "HorizontalGreenSocket"}},
+            {DetailType.Blue, new HashSet<string> {"VerticalBlueSocket", "HorizontalBlueSocket"}}
+        };
 
         public Robot(Server<PositionSensorsData> server, PositionData info)
         {
@@ -70,13 +94,13 @@ namespace Robot
         public PositionSensorsData MoveTo(Direction[] directions,MapHelper.Map map)
         {
             var robotDiscretePosition = map.GetDiscretePosition(map.CurrentPosition);
-            var directionCommands = new Dictionary<Direction, Func<Point>>
-            {
-                {Direction.Up, () => new Point(robotDiscretePosition.X, robotDiscretePosition.Y - 1)},
-                {Direction.Right, () => new Point(robotDiscretePosition.X + 1, robotDiscretePosition.Y)},
-                {Direction.Down, () => new Point(robotDiscretePosition.X, robotDiscretePosition.Y + 1)},
-                {Direction.Left, () => new Point(robotDiscretePosition.X - 1, robotDiscretePosition.Y)}
-            };
+            //var directionCommands = new Dictionary<Direction, Func<Point,Point>>
+            //{
+            //    {Direction.Up, robotPosition => new Point(robotPosition.X, robotPosition.Y - 1)},
+            //    {Direction.Right, robotPosition => new Point(robotPosition.X + 1, robotPosition.Y)},
+            //    {Direction.Down, robotPosition => new Point(robotPosition.X, robotPosition.Y + 1)},
+            //    {Direction.Left, robotPosition => new Point(robotPosition.X - 1, robotPosition.Y)}
+            //};
             Console.WriteLine("Еду");
             PositionSensorsData sensorsData = null;
             for (int i = 0; i < directions.Length; i++)
@@ -92,6 +116,11 @@ namespace Robot
                     //TurnTo(directions[i].ToAngle());
                     //sensorsData = Server.SendCommand(new Command {LinearVelocity = 50, Time = 1});
                     //robotDiscretePosition = directionCommands[directions[i]]();
+                if (!dictionaryOfDirection.ContainsKey(directions[i]))
+                {
+                    Enum.TryParse(directions[i].ToString().Split(new[] { ',' })[0], out  directions[i]);
+                    //     var target = new Point(robotPosition.X * 50 + dictionaryOfDirection[direction].X - 150, robotPosition.Y * -50 + dictionaryOfDirection[direction].Y + 150);
+                }
                 MoveToMiddle(map, directions[i]);
                 TurnTo(directions[i].ToAngle());
                 sensorsData = Server.SendCommand(new Command { LinearVelocity = 50, Time = 0.2});
@@ -105,20 +134,35 @@ namespace Robot
 
         public PositionSensorsData Take(MapHelper.Map map,Point target)
         {
+            
             Console.WriteLine("Пытаюсь взять"); 
+            
             PositionSensorsData sensorsData = null;
-            //TurnTo(direction.ToAngle());            
+            //TurnTo(direction.ToAngle());
+            var robotDiscretPoint = map.GetDiscretePosition(map.CurrentPosition);
+
+            if (robotDiscretPoint.X == map.GetDiscretePosition(target.X, target.Y).X && robotDiscretPoint.Y == map.GetDiscretePosition(target.X, target.Y).Y)
+            {                
+                Direction[] a ={map.AvailableDirectionsByCoordinates[robotDiscretPoint.X, robotDiscretPoint.Y]};                
+                sensorsData = MoveTo(a, map);
+                Console.WriteLine("Нулевой элемент а = "+ a[0]);
+                map.Update(sensorsData);
+                Info = sensorsData.Position.PositionsData[Id];              
+            }
+            sensorsData = MoveToMiddle(map, Direction.Left);            
+            map.Update(sensorsData);
+            Info = sensorsData.Position.PositionsData[Id];
             var angle = Math.Atan2(target.Y - Coordinate.Y, target.X - Coordinate.X) * 180 / Math.PI;
             TurnTo(angle);
             var r = new Point((int)map.CurrentPosition.X, (int)map.CurrentPosition.Y);
-            if (PointExtension.VectorLength(target, r) > 17)          
-                Server.SendCommand(new Command { LinearVelocity = 50, Time = (PointExtension.VectorLength(target, r)-17) / 50 });
+            if (PointExtension.VectorLength(target, r) > 19)         
+                Server.SendCommand(new Command { LinearVelocity = 50, Time = (PointExtension.VectorLength(target, r)-19) / 50 });
           
             //var distance = PointExtension.VectorLength(Coordinate, target) - 20;
             //sensorsData = Server.SendCommand(new Command { LinearVelocity = distance, Time = 1 });
             sensorsData=Server.SendCommand(new Command { Action = CommandAction.Grip, Time = 1 });
-            if (PointExtension.VectorLength(target, r) > 17)            
-                sensorsData = Server.SendCommand(new Command { LinearVelocity = -50, Time = (PointExtension.VectorLength(target, r) -17) / 50 });
+            if (PointExtension.VectorLength(target, r) > 19)            
+                sensorsData = Server.SendCommand(new Command { LinearVelocity = -50, Time = (PointExtension.VectorLength(target, r) -19) / 50 });
             map.Update(sensorsData);
             //sensorsData = Server.SendCommand(new Command { LinearVelocity = -distance, Time = 1 });           
             Info = sensorsData.Position.PositionsData[Id];
@@ -129,12 +173,6 @@ namespace Robot
         public PositionSensorsData TakeClosestDetail(MapHelper.Map map, HashSet<string> detailsType, out DetailType detailType)
         {
             Console.WriteLine("Еду к ближайшей детали");
-            var typeDictionary = new Dictionary<string, DetailType>
-            {
-                {"GreenDetail", DetailType.Green},
-                {"RedDetail", DetailType.Red},
-                {"BlueDetail", DetailType.Blue}
-            };
             //Point target = null;// ближайшая деталь
             detailType = DetailType.Red;
             PositionSensorsData sensorsData = null;
@@ -146,7 +184,7 @@ namespace Robot
             
             if (pathTuple == null)
                 Server.Exit();
-            if (pathTuple.Item2 == null)
+            if (object.ReferenceEquals(null,pathTuple.Item2))
                 Server.Exit();
             var path = pathTuple.Item2;
             var target = pathTuple.Item1.AbsoluteCoordinate;                        
@@ -163,16 +201,10 @@ namespace Robot
         }
 
         public PositionSensorsData MoveToClosestWall(MapHelper.Map map, DetailType detailType)
-        { 
+        {  
+           
             Console.WriteLine("Еду к нужной стене");
             PositionSensorsData sensorsData = null;
-
-            var dictionaryOfWalls = new Dictionary<DetailType, HashSet<string>>
-            {
-                {DetailType.Red, new HashSet<string> {"VerticalRedSocket", "HorizontalRedSocket"}},
-                {DetailType.Green, new HashSet<string> {"VerticalGreenSocket", "HorizontalGreenSocket"}},
-                {DetailType.Blue, new HashSet<string> {"VerticalBlueSocket", "HorizontalBlueSocket"}}
-            };
 
             Tuple<Point, Direction[]> pathTuple = map.Walls
                 .Where(wall => dictionaryOfWalls[detailType].Contains(wall.Type))
@@ -189,19 +221,28 @@ namespace Robot
         }
         public PositionSensorsData MoveToMiddle(MapHelper.Map map,Direction direction = Direction.No)
         {
-            var dictionaryOfDirection = new Dictionary<Direction, Point>()
-            {
-                {Direction.Up, new Point(-25,0)},
-                {Direction.Down, new Point(-25, -50)},
-                {Direction.Left, new Point(-50, -25)},
-                {Direction.Right, new Point(0, -25)},
-                {Direction.No, new Point(-25, -25)},
-            };
+            //var dictionaryOfDirection = new Dictionary<Direction, Point>()
+            //{
+            //    {Direction.Up, new Point(-25,0)},
+            //    {Direction.Down, new Point(-25, -50)},
+            //    {Direction.Left, new Point(-50, -25)},
+            //    {Direction.Right, new Point(0, -25)},
+            //    {Direction.No, new Point(-25, -25)},
+            //};
 
             PositionSensorsData sensorsData = null;
+            Console.WriteLine(direction.ToString());
+           
+            
             var robotPosition = map.GetDiscretePosition(Coordinate.X,Coordinate.Y);            
             var r = new Point((int)map.CurrentPosition.X, (int)map.CurrentPosition.Y);
-            var target = new Point(robotPosition.X*50 + dictionaryOfDirection[direction].X - 150, robotPosition.Y*-50 + dictionaryOfDirection[direction].Y + 150);
+           if (!dictionaryOfDirection.ContainsKey(direction))
+            {
+                Enum.TryParse(direction.ToString().Split(new []{','})[0], out direction);
+         //     var target = new Point(robotPosition.X * 50 + dictionaryOfDirection[direction].X - 150, robotPosition.Y * -50 + dictionaryOfDirection[direction].Y + 150);
+            }
+          //  else
+          var target = new Point(robotPosition.X*50 + dictionaryOfDirection[direction].X - 150, robotPosition.Y*-50 + dictionaryOfDirection[direction].Y + 150);
 
            
 
