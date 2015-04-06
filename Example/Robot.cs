@@ -70,27 +70,34 @@ namespace Robot
         public PositionSensorsData MoveTo(Direction[] directions,MapHelper.Map map)
         {
             var robotDiscretePosition = map.GetDiscretePosition(map.CurrentPosition);
-            var directionCommands = new Dictionary<Direction, Func<Point>>();
-            directionCommands.Add(Direction.Up, () =>new Point(robotDiscretePosition.X,robotDiscretePosition.Y-1));
-            directionCommands.Add(Direction.Right, () =>new Point(robotDiscretePosition.X+1,robotDiscretePosition.Y));
-            directionCommands.Add(Direction.Down, () =>new Point(robotDiscretePosition.X,robotDiscretePosition.Y+1));
-            directionCommands.Add(Direction.Left, () =>new Point(robotDiscretePosition.X-1,robotDiscretePosition.Y));
+            var directionCommands = new Dictionary<Direction, Func<Point>>
+            {
+                {Direction.Up, () => new Point(robotDiscretePosition.X, robotDiscretePosition.Y - 1)},
+                {Direction.Right, () => new Point(robotDiscretePosition.X + 1, robotDiscretePosition.Y)},
+                {Direction.Down, () => new Point(robotDiscretePosition.X, robotDiscretePosition.Y + 1)},
+                {Direction.Left, () => new Point(robotDiscretePosition.X - 1, robotDiscretePosition.Y)}
+            };
             Console.WriteLine("Еду");
             PositionSensorsData sensorsData = null;
             for (int i = 0; i < directions.Length; i++)
             {
                 Console.WriteLine(robotDiscretePosition + "  = " + map.GetDiscretePosition(map.CurrentPosition));
-                if (robotDiscretePosition.X != map.GetDiscretePosition(map.CurrentPosition).X && robotDiscretePosition.Y != map.GetDiscretePosition(map.CurrentPosition).Y)
-                {
-                   TurnTo(directions[i].ToAngle());
-                   sensorsData = Server.SendCommand(new Command { Action = CommandAction.Release, Time = 1 });   
-                   return sensorsData;                   
-                }
+                //if (robotDiscretePosition.X != map.GetDiscretePosition(map.CurrentPosition).X && robotDiscretePosition.Y != map.GetDiscretePosition(map.CurrentPosition).Y)
+                //{
+                //   TurnTo(directions[i].ToAngle());
+                //   sensorsData = Server.SendCommand(new Command { Action = CommandAction.Release, Time = 1 });   
+                //   return sensorsData;                    
+                //}
+              
+                    //TurnTo(directions[i].ToAngle());
+                    //sensorsData = Server.SendCommand(new Command {LinearVelocity = 50, Time = 1});
+                    //robotDiscretePosition = directionCommands[directions[i]]();
+                MoveToMiddle(map, directions[i]);
                 TurnTo(directions[i].ToAngle());
-                sensorsData = Server.SendCommand(new Command { LinearVelocity = 50, Time = 1 });
-                robotDiscretePosition = directionCommands[directions[i]]();
-                Info = sensorsData.Position.PositionsData[Id];
-                map.Update(sensorsData);
+                sensorsData = Server.SendCommand(new Command { LinearVelocity = 50, Time = 0.2});
+                    Info = sensorsData.Position.PositionsData[Id];
+                    map.Update(sensorsData);
+                
             }
             if (sensorsData == null) sensorsData = Server.SendCommand(new Command { LinearVelocity = 0, Time = 0.2 });
             return sensorsData;
@@ -139,6 +146,8 @@ namespace Robot
             
             if (pathTuple == null)
                 Server.Exit();
+            if (pathTuple.Item2 == null)
+                Server.Exit();
             var path = pathTuple.Item2;
             var target = pathTuple.Item1.AbsoluteCoordinate;                        
 
@@ -178,12 +187,23 @@ namespace Robot
             sensorsData = Server.SendCommand(new Command { Action = CommandAction.Release, Time = 1 });
             return sensorsData;
         }
-        public PositionSensorsData MoveToMiddle(MapHelper.Map map)
+        public PositionSensorsData MoveToMiddle(MapHelper.Map map,Direction direction = Direction.No)
         {
+            var dictionaryOfDirection = new Dictionary<Direction, Point>()
+            {
+                {Direction.Up, new Point(-25,0)},
+                {Direction.Down, new Point(-25, -50)},
+                {Direction.Left, new Point(-50, -25)},
+                {Direction.Right, new Point(0, -25)},
+                {Direction.No, new Point(-25, -25)},
+            };
+
             PositionSensorsData sensorsData = null;
             var robotPosition = map.GetDiscretePosition(Coordinate.X,Coordinate.Y);            
             var r = new Point((int)map.CurrentPosition.X, (int)map.CurrentPosition.Y);
-            var target = new Point(robotPosition.X*50 - 25 - 150, robotPosition.Y*-50 - 25 + 150);
+            var target = new Point(robotPosition.X*50 + dictionaryOfDirection[direction].X - 150, robotPosition.Y*-50 + dictionaryOfDirection[direction].Y + 150);
+
+           
 
             //Console.WriteLine(robotPosition + " || "+ target + " - " + r + " - " + PointExtension.VectorLength(target, r));
             //foreach (var e in map.Walls)
