@@ -70,11 +70,13 @@ namespace Robot
         public PositionSensorsData MoveTo(Direction[] directions,MapHelper.Map map)
         {
             var robotDiscretePosition = map.GetDiscretePosition(map.CurrentPosition);
-            var directionCommands = new Dictionary<Direction, Func<Point>>();
-            directionCommands.Add(Direction.Up, () =>new Point(robotDiscretePosition.X,robotDiscretePosition.Y-1));
-            directionCommands.Add(Direction.Right, () =>new Point(robotDiscretePosition.X+1,robotDiscretePosition.Y));
-            directionCommands.Add(Direction.Down, () =>new Point(robotDiscretePosition.X,robotDiscretePosition.Y+1));
-            directionCommands.Add(Direction.Left, () =>new Point(robotDiscretePosition.X-1,robotDiscretePosition.Y));
+            var directionCommands = new Dictionary<Direction, Func<Point>>
+            {
+                {Direction.Up, () => new Point(robotDiscretePosition.X, robotDiscretePosition.Y - 1)},
+                {Direction.Right, () => new Point(robotDiscretePosition.X + 1, robotDiscretePosition.Y)},
+                {Direction.Down, () => new Point(robotDiscretePosition.X, robotDiscretePosition.Y + 1)},
+                {Direction.Left, () => new Point(robotDiscretePosition.X - 1, robotDiscretePosition.Y)}
+            };
             Console.WriteLine("Еду");
             PositionSensorsData sensorsData = null;
             for (int i = 0; i < directions.Length; i++)
@@ -86,8 +88,20 @@ namespace Robot
                    sensorsData = Server.SendCommand(new Command { Action = CommandAction.Release, Time = 1 });   
                    return sensorsData;                   
                 }
-                TurnTo(directions[i].ToAngle());
-                sensorsData = Server.SendCommand(new Command { LinearVelocity = 50, Time = 1 });
+                //if (i != 0 && directions[i] != directions[i-1])
+                //{
+                //    TurnTo(Math.Sign(directions[i].ToAngle()) * 155);
+                //    sensorsData = Server.SendCommand(new Command { LinearVelocity = 50, Time = 0.7 });
+                //    //TurnTo(Math.Sign(directions[i].ToAngle()) * 125);
+                //    //sensorsData = Server.SendCommand(new Command { LinearVelocity = 50, Time = 0.3 });
+                //    MoveToMiddle(map);
+                //}
+                //else 
+                    TurnTo(directions[i].ToAngle());
+                //if(i < directions.Length - 1 && directions[i+1] != directions[i])
+                //    sensorsData = Server.SendCommand(new Command { LinearVelocity = 50, Time = 0.6 });
+                //else
+                    sensorsData = Server.SendCommand(new Command { LinearVelocity = 50, Time = 1 });
                 robotDiscretePosition = directionCommands[directions[i]]();
                 Info = sensorsData.Position.PositionsData[Id];
                 map.Update(sensorsData);
