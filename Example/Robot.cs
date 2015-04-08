@@ -70,12 +70,10 @@ namespace Robot
 
         public void TurnTo(double angle)
         {
-            Console.WriteLine("Поворачиваю");
+            //Console.WriteLine("Поворачиваю");
             var resAngle = GetNormalAngle(angle - Angle);
-            PositionSensorsData sensorsData = null;
-            if (resAngle < -180) resAngle += 360;
-            if (resAngle > 180) resAngle -= 360;           
-            Console.WriteLine("На угол "+angle + " с этого " + Angle);
+            PositionSensorsData sensorsData = null;        
+            //Console.WriteLine("На угол "+angle + " с этого " + Angle + " УГОЛ ПОВОРОТА : "+ resAngle);
             if (Math.Abs(resAngle) < 0.5) return;
             sensorsData =
                 Server.SendCommand(new Command
@@ -88,7 +86,10 @@ namespace Robot
 
         public double GetNormalAngle(double angle)
         {
-            return angle % 360;
+            angle = angle % 360;
+            if (angle < -180) angle += 360;
+            if (angle > 180) angle -= 360; 
+            return angle;
         }
         
         public PositionSensorsData MoveTo(Direction[] directions,MapHelper.Map map)
@@ -122,13 +123,20 @@ namespace Robot
                     //     var target = new Point(robotPosition.X * 50 + dictionaryOfDirection[direction].X - 150, robotPosition.Y * -50 + dictionaryOfDirection[direction].Y + 150);
                 }
                 MoveToMiddle(map, directions[i]);
-                TurnTo(directions[i].ToAngle());
-                sensorsData = Server.SendCommand(new Command { LinearVelocity = 50, Time = 0.2});
+                var directionVelocity = 1;
+                if (Math.Abs(GetNormalAngle(directions[i].ToAngle() - Info.Angle)) > 115)
+                {
+                    directionVelocity = -1;
+                    TurnTo(directions[i].ToAngle()+180);
+                }
+                else
+                    TurnTo(directions[i].ToAngle());
+                sensorsData = Server.SendCommand(new Command { LinearVelocity = 50 * directionVelocity, Time = 0.3 });
                     Info = sensorsData.Position.PositionsData[Id];
                     map.Update(sensorsData);
                 
             }
-            if (sensorsData == null) sensorsData = Server.SendCommand(new Command { LinearVelocity = 0, Time = 0.2 });
+            if (sensorsData == null) sensorsData = Server.SendCommand(new Command { LinearVelocity = 0, Time = 0.1 });
             return sensorsData;
         }
 
@@ -141,17 +149,17 @@ namespace Robot
             //TurnTo(direction.ToAngle());
             var robotDiscretPoint = map.GetDiscretePosition(map.CurrentPosition);
 
-            if (robotDiscretPoint.X == map.GetDiscretePosition(target.X, target.Y).X && robotDiscretPoint.Y == map.GetDiscretePosition(target.X, target.Y).Y)
-            {                
-                Direction[] a ={map.AvailableDirectionsByCoordinates[robotDiscretPoint.X, robotDiscretPoint.Y]};                
-                sensorsData = MoveTo(a, map);
-                Console.WriteLine("Нулевой элемент а = "+ a[0]);
-                map.Update(sensorsData);
-                Info = sensorsData.Position.PositionsData[Id];              
-            }
-            sensorsData = MoveToMiddle(map, Direction.Left);            
-            map.Update(sensorsData);
-            Info = sensorsData.Position.PositionsData[Id];
+            //if (robotDiscretPoint.X == map.GetDiscretePosition(target.X, target.Y).X && robotDiscretPoint.Y == map.GetDiscretePosition(target.X, target.Y).Y)
+            //{                
+            //    Direction[] a ={map.AvailableDirectionsByCoordinates[robotDiscretPoint.X, robotDiscretPoint.Y]};                
+            //    sensorsData = MoveTo(a, map);
+            //    Console.WriteLine("Нулевой элемент а = "+ a[0]);
+            //    map.Update(sensorsData);
+            //    Info = sensorsData.Position.PositionsData[Id];              
+            //}
+            //sensorsData = MoveToMiddle(map, Direction.Left);            
+            //map.Update(sensorsData);
+            //Info = sensorsData.Position.PositionsData[Id];
             var angle = Math.Atan2(target.Y - Coordinate.Y, target.X - Coordinate.X) * 180 / Math.PI;
             TurnTo(angle);
             var r = new Point((int)map.CurrentPosition.X, (int)map.CurrentPosition.Y);
@@ -161,8 +169,9 @@ namespace Robot
             //var distance = PointExtension.VectorLength(Coordinate, target) - 20;
             //sensorsData = Server.SendCommand(new Command { LinearVelocity = distance, Time = 1 });
             sensorsData=Server.SendCommand(new Command { Action = CommandAction.Grip, Time = 1 });
-            if (PointExtension.VectorLength(target, r) > 19)            
-                sensorsData = Server.SendCommand(new Command { LinearVelocity = -50, Time = (PointExtension.VectorLength(target, r) -19) / 50 });
+            //if (PointExtension.VectorLength(target, r) > 19)
+                sensorsData = Server.SendCommand(new Command { LinearVelocity = -50, Time = 0.2 });
+                //sensorsData = Server.SendCommand(new Command { LinearVelocity = -50, Time = (PointExtension.VectorLength(target, r) -19) / 50 });
             map.Update(sensorsData);
             //sensorsData = Server.SendCommand(new Command { LinearVelocity = -distance, Time = 1 });           
             Info = sensorsData.Position.PositionsData[Id];
@@ -180,6 +189,7 @@ namespace Robot
                 .Details.Select(detail => Tuple.Create(detail,PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition),
                 detail.DiscreteCoordinate)))
                 .OrderBy(tuple =>tuple.Item2.Length)
+                //.ThenBy(tuple => PointExtension.VectorLength(tuple.Item1.AbsoluteCoordinate, Coordinate))
                 .FirstOrDefault();
             
             if (pathTuple == null)
@@ -216,6 +226,13 @@ namespace Robot
             var path = pathTuple.Item2;
             var target = pathTuple.Item1;
             sensorsData = MoveTo(path,map);
+            if (path.Length > 0)
+                TurnTo(path[path.Length - 1].ToAngle());
+            else
+            {
+                MoveToMiddle(map);
+                sensorsData = Server.SendCommand(new Command { LinearVelocity = -50, Time = 0.2 });
+            }
             sensorsData = Server.SendCommand(new Command { Action = CommandAction.Release, Time = 1 });
             return sensorsData;
         }
@@ -253,17 +270,28 @@ namespace Robot
             //}
             if (Math.Abs(PointExtension.VectorLength(target, r)) > 1e-1)
             {
+                var directionVelocity = 1;
                 var angle = Math.Atan2(target.Y - Coordinate.Y, target.X - Coordinate.X)*180/Math.PI;
-                TurnTo(angle);
+                //Console.WriteLine("бомже угол"+Info.Angle);
+                if (Math.Abs(GetNormalAngle(angle - Info.Angle)) > 115)
+                {
+                    Console.WriteLine("Поехал задом");
+                    Console.WriteLine(angle + " - " + Info.Angle);
+                    directionVelocity = -1;
+                    TurnTo(angle+180);
+                }
+                else
+                    TurnTo(angle);
                 sensorsData =
                     Server.SendCommand(new Command
                     {
-                        LinearVelocity = 50,
+                        LinearVelocity = 50*directionVelocity,
                         Time = (PointExtension.VectorLength(target, r))/50
                     });
             }
-            else sensorsData = Server.SendCommand(new Command {LinearVelocity = 0, Time = 0.2});
-                        
+            else sensorsData = Server.SendCommand(new Command {LinearVelocity = 0, Time = 0.1});
+            map.Update(sensorsData);
+            Info = sensorsData.Position.PositionsData[Id];
              Console.WriteLine("Двигаюсь в центр"); 
             //var angle = Math.Atan((rocket.Location.Y - target.Y) / (target.X - rocket.Location.X));
             //if (rocket.Location.X > target.X) angle = Math.PI + angle;      

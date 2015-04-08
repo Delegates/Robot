@@ -24,7 +24,7 @@ namespace Robot
 		{           
 			Side = Side.Left, //Переключив это поле, можно отладить алгоритм для левой или правой стороны, а также для произвольной стороны, назначенной сервером
 			LevelName = LevelName.Level1, //Задается уровень, в котором вы хотите принять участие            
-            MapNumber =101//Задавая различные значения этого поля, вы можете сгенерировать различные случайные карты
+            MapNumber = rnd.Next()//Задавая различные значения этого поля, вы можете сгенерировать различные случайные карты
 		//654
         };
         
@@ -53,8 +53,8 @@ namespace Robot
             while (true)
             {
                 Console.WriteLine("зашел");
-              sensorsData = robot.MoveToMiddle(map);                
-              map.Update(sensorsData);
+              //sensorsData = robot.MoveToMiddle(map);                
+              //map.Update(sensorsData);
               //Point target = null; // 1 деталь
               DetailType detail;
 
