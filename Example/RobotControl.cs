@@ -24,7 +24,7 @@ namespace Robot
 		{           
 			Side = Side.Left, //Переключив это поле, можно отладить алгоритм для левой или правой стороны, а также для произвольной стороны, назначенной сервером
 			LevelName = LevelName.Level1, //Задается уровень, в котором вы хотите принять участие            
-            MapNumber = rnd.Next()//Задавая различные значения этого поля, вы можете сгенерировать различные случайные карты
+            MapNumber = 53//Задавая различные значения этого поля, вы можете сгенерировать различные случайные карты
 		//654
         };
         
@@ -41,29 +41,18 @@ namespace Robot
 
 			PositionSensorsData sensorsData = null;
 		   
-            var robot = new Robot(server, helloPackageAns.SensorsData.Position.PositionsData[helloPackageAns.RealSide == Side.Left ? 0 : 1]); // создание класса робот
-
-		    foreach (var bomj in helloPackageAns.SensorsData.BuildMap().Details) // координаты деталей(юзал для проверки)
-		        Console.WriteLine(bomj.Type);
-
-            var map = helloPackageAns.SensorsData.BuildMap();
+            var robot = new Robot(server, helloPackageAns.SensorsData.BuildMap());
 	
             var details = new HashSet<string> { "GreenDetail", "BlueDetail", "RedDetail" }; // список деталей
 
             while (true)
             {
-                Console.WriteLine("зашел");
-              //sensorsData = robot.MoveToMiddle(map);                
-              //map.Update(sensorsData);
-              //Point target = null; // 1 деталь
+              Console.WriteLine("зашел");
               DetailType detail;
-
-              sensorsData = robot.TakeClosestDetail(map, details, out detail);
-              map.Update(sensorsData);
-              if (!sensorsData.DetailsInfo.HasGrippedDetail)
+              sensorsData = robot.TakeClosestDetail(details, out detail);
+              if (!sensorsData.DetailsInfo.HasGrippedDetail) // Если не схватил деталь - алгоритм заново
                  continue;
-              sensorsData = robot.MoveToClosestWall(map, detail);
-              map.Update(sensorsData);
+              robot.MoveToClosestWall(detail);
             }
 		    
 
@@ -75,15 +64,11 @@ namespace Robot
             //sensorsData = server.SendCommand(new Command { LinearVelocity = 50, Time = 1 });
             //sensorsData = server.SendCommand(new Command { Action = CommandAction.Grip, Time = 1 });
             //sensorsData = server.SendCommand(new Command { LinearVelocity = -50, Time = 1 });
-            System.Threading.Thread.Sleep(50000);
-            ////MapHelper.PathSearcher.FindPath();
-            ////DirectionHelper.
             //sensorsData = server.SendCommand(new Command { AngularVelocity = Angle.FromGrad(90), Time = 1 });
             //sensorsData = server.SendCommand(new Command {Action = CommandAction.Release, Time = 1});
 
 			//Используйте эту команду в конце кода для того, чтобы в режиме отладки все окна быстро закрылись, когда вы откатали алгоритм.
 			//Если вы забудете это сделать, сервер какое-то время будет ожидать команд от вашего отвалившегося клиента. 
-			server.Exit();
 		}      
 	}
 }
