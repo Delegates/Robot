@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using MapHelper;
+using RepairTheStarship.Sensors;
+using CVARC.Basic.Sensors;
 
 namespace Robot
 {
@@ -36,5 +38,10 @@ namespace Robot
         {
             return Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2));
         }
+        public static double VectorLength(PositionData p1, PositionData p2)
+        {
+            return Math.Sqrt(Math.Pow(p1.X - p2.X, 2) + Math.Pow(p1.Y - p2.Y, 2));
+        }
+        
     }
 }

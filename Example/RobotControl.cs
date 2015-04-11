@@ -23,9 +23,10 @@ namespace Robot
 		private static readonly ClientSettings Settings = new ClientSettings
 		{           
 			Side = Side.Left, //Переключив это поле, можно отладить алгоритм для левой или правой стороны, а также для произвольной стороны, назначенной сервером
-			LevelName = LevelName.Level1, //Задается уровень, в котором вы хотите принять участие            
-            MapNumber = 53//Задавая различные значения этого поля, вы можете сгенерировать различные случайные карты
-		//654
+			LevelName = LevelName.Level2, //Задается уровень, в котором вы хотите принять участие            
+            MapNumber = 567, //Задавая различные значения этого поля, вы можете сгенерировать различные случайные карты
+		    BotName = Bots.Vaermina
+            //654
         };
         
 		private static void Main(string[] args)

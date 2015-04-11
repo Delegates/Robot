@@ -64,10 +64,13 @@ namespace Robot
             get { return Info.Angle; }
         }
 
+        private bool Danger = false;
+
         public Point Coordinate
         {
             get { return new Point((int) Info.X, (int) Info.Y); }
         }
+
 
         public void TurnTo(double angle)
         {
@@ -83,7 +86,83 @@ namespace Robot
             map.Update(sensorsData);
         }
 
-
+        public void InDanger()
+        {
+            if (Danger) return;
+            
+            PositionSensorsData sensorsData = null;
+            double time = 0;
+            var path = PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition), map.GetDiscretePosition(map.OpponentPosition));
+            while (path.Length <= 1)
+            {
+                Danger = true;
+                if (time > 2)
+                {
+                    var robotDiscret = map.GetDiscretePosition(Coordinate.X, Coordinate.Y);
+                    var direction = map.AvailableDirectionsByCoordinates[robotDiscret.X, robotDiscret.Y];
+                    var directions = (RobotHelper.squareEdges.ContainsKey(direction)) ? new List<Direction> { direction } : ((direction.ToString() == "All") ? new[] { "Rigth", "Left", "Up", "Down" } : direction.ToString().Split(','))
+                        .Select(str =>
+                        {                            
+                            Direction y;
+                            Enum.TryParse(str, out y);
+                            return y;
+                        })
+                        .ToList();
+                    Console.WriteLine(direction.ToString());
+                    Console.WriteLine(RobotHelper.squareEdges.ContainsKey(direction));
+                    double distance = RobotHelper.VectorLength(map.CurrentPosition, map.OpponentPosition);
+                    //foreach (var dir in directions)
+                    //{
+                    //    if (dir == Direction.No) continue;
+                    //    var futurePosition = new Point((int)(map.CurrentPosition.X + 15 * Math.Cos(dir.ToAngle() * Math.PI / 180)),(int)(map.CurrentPosition.Y + 15 * Math.Sin(dir.ToAngle() * Math.PI / 180)));
+                    //    Console.WriteLine("угол " + Direction.Down.ToAngle());
+                    //    Console.WriteLine(RobotHelper.VectorLength(futurePosition, new Point((int)map.OpponentPosition.X, (int)map.OpponentPosition.Y)) - RobotHelper.VectorLength(map.CurrentPosition, map.OpponentPosition));
+                    //if (RobotHelper.VectorLength(futurePosition, new Point((int)map.OpponentPosition.X, (int)map.OpponentPosition.Y)) > RobotHelper.VectorLength(map.CurrentPosition, map.OpponentPosition))
+                    //{
+                    //    MoveTo(new Direction[] { dir });
+                    //    Danger = false;
+                    //    return;
+                    //}
+                    Console.WriteLine("до");
+                    var tuple = directions
+                                    .Where(dir => dir != Direction.No)
+                                    .Select(dir => Tuple.Create(RobotHelper.VectorLength(new Point((int)(map.CurrentPosition.X + 15 * Math.Cos(dir.ToAngle() * Math.PI / 180)), (int)(map.CurrentPosition.Y + 15 * Math.Sin(dir.ToAngle() * Math.PI / 180))), new Point((int)map.OpponentPosition.X, (int)map.OpponentPosition.Y)) - distance, dir))
+                                    .Max();
+                    Console.WriteLine("после");
+                    if (tuple.Item1>0)
+                    {
+                        //MoveTo(new Direction[] { tuple.Item2 });
+                        TurnTo(tuple.Item2.ToAngle());
+                        sensorsData = Server.SendCommand(new Command { LinearVelocity = 50, Time = 1 });
+                        Danger = false;
+                        return;
+                    }
+                        
+                    //}
+                   
+                        //MoveTo(new Direction[] 
+                        //    {  
+                        //        directions
+                        //            .Where(dir => dir != Direction.No)
+                        //            .Select(dir => Tuple.Create(RobotHelper.VectorLength(new Point((int)(map.CurrentPosition.X + 15 * Math.Cos(dir.ToAngle() * Math.PI / 180)), (int)(map.CurrentPosition.Y + 15 * Math.Sin(dir.ToAngle() * Math.PI / 180))), new Point((int)map.OpponentPosition.X, (int)map.OpponentPosition.Y)) - RobotHelper.VectorLength(map.CurrentPosition, map.OpponentPosition), dir))
+                        //            .Max()
+                        //            .Item2 
+                        //    }
+                        //);
+                        Console.WriteLine(directions
+                                        .Where(dir => dir != Direction.No)
+                                        .Select(dir => Tuple.Create(RobotHelper.VectorLength(new Point((int)(map.CurrentPosition.X + 15 * Math.Cos(dir.ToAngle() * Math.PI / 180)), (int)(map.CurrentPosition.Y + 15 * Math.Sin(dir.ToAngle() * Math.PI / 180))), new Point((int)map.OpponentPosition.X, (int)map.OpponentPosition.Y)) - RobotHelper.VectorLength(map.CurrentPosition, map.OpponentPosition), dir))
+                                        .Max()
+                                        .Item2);
+                    time = 0;                    
+                }
+                sensorsData = Server.SendCommand(new Command { LinearVelocity = 0, Time = 0.2 });
+                time += 0.2;
+                map.Update(sensorsData);
+                path = PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition), map.GetDiscretePosition(map.OpponentPosition));
+            }
+            
+        }
         public PositionSensorsData MoveTo(Direction[] directions)
         {
             PositionSensorsData sensorsData = null;
@@ -100,6 +179,7 @@ namespace Robot
                 }
                 else
                     TurnTo(directions[i].ToAngle());
+                InDanger();
                 sensorsData = Server.SendCommand(new Command {LinearVelocity = maxSpeed*directionVelocity, Time = 0.3});
                 map.Update(sensorsData);
             }
@@ -114,11 +194,14 @@ namespace Robot
             var angle = Math.Atan2(target.Y - Coordinate.Y, target.X - Coordinate.X)*180/Math.PI;
             TurnTo(angle);
             if (RobotHelper.VectorLength(target, Coordinate) > squadSize)
+            {
+                InDanger();
                 Server.SendCommand(new Command
                 {
                     LinearVelocity = maxSpeed,
-                    Time = (RobotHelper.VectorLength(target, Coordinate) - squadSize)/maxSpeed
+                    Time = (RobotHelper.VectorLength(target, Coordinate) - squadSize) / maxSpeed
                 });
+            }
             Server.SendCommand(new Command {Action = CommandAction.Grip, Time = 1});
             sensorsData = Server.SendCommand(new Command { LinearVelocity = -maxSpeed, Time = 0.2 });
             map.Update(sensorsData);
@@ -190,6 +273,7 @@ namespace Robot
         {
             PositionSensorsData sensorsData = null;
             var robotPosition = map.GetDiscretePosition(Coordinate.X, Coordinate.Y);
+            InDanger();
             if (!RobotHelper.squareEdges.ContainsKey(direction))
                 Enum.TryParse(direction.ToString().Split(',')[0], out direction);
             var target = RobotHelper.GetAbsoluteCoordinateEdgeInSquard(robotPosition, direction);
@@ -202,12 +286,13 @@ namespace Robot
             }
             else
                 TurnTo(angle);
-            sensorsData =
-                Server.SendCommand(new Command
-                {
-                    LinearVelocity = maxSpeed*directionVelocity,
-                    Time = (RobotHelper.VectorLength(target, Coordinate))/maxSpeed
-                });
+                sensorsData =
+                    Server.SendCommand(new Command
+                    {
+                        LinearVelocity = maxSpeed * directionVelocity,
+                        Time = (RobotHelper.VectorLength(target, Coordinate)) / maxSpeed
+                    });
+            
             map.Update(sensorsData);
             return sensorsData;
         }
