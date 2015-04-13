@@ -96,7 +96,7 @@ namespace Robot
             while (path.Length <= 1)
             {
                 Danger = true;
-                if (time > 2)
+                if (time > 3)
                 {
                     var robotDiscret = map.GetDiscretePosition(Coordinate.X, Coordinate.Y);
                     var direction = map.AvailableDirectionsByCoordinates[robotDiscret.X, robotDiscret.Y];
@@ -161,7 +161,8 @@ namespace Robot
                 map.Update(sensorsData);
                 path = PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition), map.GetDiscretePosition(map.OpponentPosition));
             }
-            
+            Danger = false;
+
         }
         public PositionSensorsData MoveTo(Direction[] directions)
         {

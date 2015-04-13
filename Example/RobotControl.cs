@@ -20,13 +20,15 @@ namespace Robot
     internal class RobotControl
 	{ 
         static Random rnd = new Random(DateTime.Now.Millisecond);
+        public static bool Flag = false;
+
 		private static readonly ClientSettings Settings = new ClientSettings
 		{           
 			Side = Side.Left, //Переключив это поле, можно отладить алгоритм для левой или правой стороны, а также для произвольной стороны, назначенной сервером
 			LevelName = LevelName.Level2, //Задается уровень, в котором вы хотите принять участие            
-            MapNumber = 567, //Задавая различные значения этого поля, вы можете сгенерировать различные случайные карты
-		    BotName = Bots.Vaermina
-            //654
+            MapNumber = 188, //Задавая различные значения этого поля, вы можете сгенерировать различные случайные карты
+		    BotName = Bots.Azura
+            //567 654
         };
         
 		private static void Main(string[] args)
@@ -45,14 +47,16 @@ namespace Robot
             var robot = new Robot(server, helloPackageAns.SensorsData.BuildMap());
 	
             var details = new HashSet<string> { "GreenDetail", "BlueDetail", "RedDetail" }; // список деталей
+            
 
             while (true)
             {
+              Flag = false;
               Console.WriteLine("зашел");
               DetailType detail;
               sensorsData = robot.TakeClosestDetail(details, out detail);
-              if (!sensorsData.DetailsInfo.HasGrippedDetail) // Если не схватил деталь - алгоритм заново
-                 continue;
+              if (!sensorsData.DetailsInfo.HasGrippedDetail || Flag) // Если не схватил деталь - алгоритм заново
+                 continue;              
               robot.MoveToClosestWall(detail);
             }
 		    
