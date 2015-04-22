@@ -26,7 +26,7 @@ namespace Robot
 		{           
 			Side = Side.Left, //Переключив это поле, можно отладить алгоритм для левой или правой стороны, а также для произвольной стороны, назначенной сервером
 			LevelName = LevelName.Level2, //Задается уровень, в котором вы хотите принять участие            
-            MapNumber = 188, //Задавая различные значения этого поля, вы можете сгенерировать различные случайные карты
+            MapNumber =132, //Задавая различные значения этого поля, вы можете сгенерировать различные случайные карты
 		    BotName = Bots.Azura
             //567 654
         };
@@ -54,10 +54,19 @@ namespace Robot
               Flag = false;
               Console.WriteLine("зашел");
               DetailType detail;
-              sensorsData = robot.TakeClosestDetail(details, out detail);
+      //         robot.MapUpdate(sensorsData);
+              Console.WriteLine("dfdf" + robot.map.Walls.Count());
+                foreach (var e in robot.map.Walls)
+                {
+                    Console.WriteLine(e.Type);
+                }
+               
+            sensorsData = robot.TakeClosestDetail(details, out detail);
               if (!sensorsData.DetailsInfo.HasGrippedDetail || Flag) // Если не схватил деталь - алгоритм заново
                  continue;              
               robot.MoveToClosestWall(detail);
+
+              robot.MapUpdate(sensorsData);
             }
 		    
 

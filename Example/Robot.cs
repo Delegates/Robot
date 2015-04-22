@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using AIRLab.Mathematics;
 using BEPUphysics.Constraints.SingleEntity;
 using ClientBase;
 using CVARC.Basic.Controllers;
@@ -19,16 +20,41 @@ namespace Robot
     }
 
 
+
     internal class Robot
     {
         private const double maxSpeed = 50;
         private const double squadSize = 19;
+
+        public static readonly Dictionary<DetailType, List<Point>> knownWalls = new Dictionary<DetailType, List<Point>>
+        {
+            {DetailType.Red, new List<Point>()},
+            {DetailType.Green, new List<Point>()},
+            {DetailType.Blue,  new List<Point>()}
+        };
+
+        public static readonly List<Point> knownDetails = new List<Point>();
+     //   {
+      //      {DetailType.Red, new List<Point>()},
+     //       {DetailType.Green, new List<Point>()},
+     //       {DetailType.Blue,  new List<Point>()}
+      //  };
 
         private static readonly Dictionary<string, DetailType> detailTypeDictionary = new Dictionary<string, DetailType>
         {
             {"GreenDetail", DetailType.Green},
             {"RedDetail", DetailType.Red},
             {"BlueDetail", DetailType.Blue}
+        };
+
+        private static readonly Dictionary<string, DetailType> wallTypeDictionary = new Dictionary<string, DetailType>
+        {    
+            {"VerticalRedSocket", DetailType.Red},
+            {"HorizontalRedSocket", DetailType.Red},
+            {"VerticalBlueSocket", DetailType.Blue},
+            {"HorizontalBlueSocket", DetailType.Blue},
+            {"VerticalGreenSocket", DetailType.Green},
+            {"HorizontalGreenSocket", DetailType.Green}
         };
 
         private static readonly Dictionary<DetailType, HashSet<string>> socketWallsDictionary = new Dictionary
@@ -47,7 +73,7 @@ namespace Robot
 
         private Server<PositionSensorsData> Server { get; set; }
 
-        private Map map { get; set; }
+        public Map map { get; set; }
 
         public PositionData Info
         {
@@ -71,6 +97,25 @@ namespace Robot
             get { return new Point((int) Info.X, (int) Info.Y); }
         }
 
+        public void MapUpdate(PositionSensorsData sensorData)
+        {
+            map.Update(sensorData);            
+            foreach (var e in map.Walls)
+            {
+                if(!wallTypeDictionary.ContainsKey(e.Type))
+                    continue;
+                var color = wallTypeDictionary[e.Type];
+                if (!knownWalls[color].Any(p => p.X == e.DiscreteCoordinate.X && p.Y == e.DiscreteCoordinate.Y))
+                {
+                    knownWalls[color].Add(e.DiscreteCoordinate);
+                }
+            }
+            foreach (var e in map.Details)
+            {
+                if (!knownDetails.Any(p => p.X == e.DiscreteCoordinate.X && p.Y == e.DiscreteCoordinate.Y))
+                    knownDetails.Add(e.DiscreteCoordinate);
+            }
+        }
 
         public void TurnTo(double angle)
         {
@@ -83,7 +128,7 @@ namespace Robot
                     AngularVelocity = AIRLab.Mathematics.Angle.FromGrad(90*Math.Sign(resAngle)),
                     Time = Math.Abs(resAngle)/90
                 });
-            map.Update(sensorsData);
+            MapUpdate(sensorsData);
         }
 
         public void InDanger()
@@ -158,35 +203,62 @@ namespace Robot
                 }
                 sensorsData = Server.SendCommand(new Command { LinearVelocity = 0, Time = 0.2 });
                 time += 0.2;
-                map.Update(sensorsData);
+                MapUpdate(sensorsData);
                 path = PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition), map.GetDiscretePosition(map.OpponentPosition));
             }
             Danger = false;
 
         }
-        public PositionSensorsData MoveTo(Direction[] directions)
+        public PositionSensorsData MoveTo(Point target)
         {
+            Console.WriteLine("уже еду ");
             PositionSensorsData sensorsData = null;
-            for (var i = 0; i < directions.Length; i++)
+            if (target.X == map.GetDiscretePosition(map.CurrentPosition).X &&
+                target.Y == map.GetDiscretePosition(map.CurrentPosition).Y)
             {
-                if (!RobotHelper.squareEdges.ContainsKey(directions[i]))
-                    Enum.TryParse(directions[i].ToString().Split(',')[0], out directions[i]); // Отрезаем 1-ую часть скреплённых enum
-                MoveToEdge(directions[i]);
+                Console.WriteLine("стипан пидр ");
+                sensorsData = Server.SendCommand(new Command {LinearVelocity = 0, Time = 0.1});
+                MapUpdate(sensorsData);
+                return sensorsData;
+            }
+
+            var directions = PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition), target)[0];
+        //    Console.WriteLine(PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition), target).Count());
+         //   foreach (var e in PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition), target))
+        //    {
+        //        Console.WriteLine(e);
+        //    }
+         //   foreach (var e in map.Walls)
+         //   {
+         //       Console.WriteLine("стена " + e);
+                
+         //   }
+           // for (var i = 0; i < directions.Length; i++)
+          //  {
+                if (!RobotHelper.squareEdges.ContainsKey(directions))
+                    Enum.TryParse(directions.ToString().Split(',')[0], out directions); // Отрезаем 1-ую часть скреплённых enum
+                MoveToEdge(directions);
                 var directionVelocity = 1;
-                if (Math.Abs(RobotHelper.GetNormalAngle(directions[i].ToAngle() - Info.Angle)) > 115)
+                if (Math.Abs(RobotHelper.GetNormalAngle(directions.ToAngle() - Info.Angle)) > 115)
                 {
                     directionVelocity = -1;
-                    TurnTo(directions[i].ToAngle() + 180);
+                    TurnTo(directions.ToAngle() + 180);
                 }
                 else
-                    TurnTo(directions[i].ToAngle());
+                    TurnTo(directions.ToAngle());
                 InDanger();
                 sensorsData = Server.SendCommand(new Command {LinearVelocity = maxSpeed*directionVelocity, Time = 0.3});
-                map.Update(sensorsData);
-            }
-            if (sensorsData == null) sensorsData = Server.SendCommand(new Command {LinearVelocity = 0, Time = 0.1});
-            map.Update(sensorsData);
-            return sensorsData;
+                MapUpdate(sensorsData);
+           // }
+           // if (sensorsData == null) sensorsData = Server.SendCommand(new Command {LinearVelocity = 0, Time = 0.1});
+         //   MapUpdate(sensorsData);
+         //   if (target.X != map.GetDiscretePosition(map.CurrentPosition).X &&
+        //        target.Y != map.GetDiscretePosition(map.CurrentPosition).Y)
+        //    {
+         //       sensorsData = MoveTo(target);
+             //   MapUpdate(sensorsData);
+         //   }
+                return MoveTo(target);
         }
 
         public PositionSensorsData Take(Point target)
@@ -205,12 +277,27 @@ namespace Robot
             }
             Server.SendCommand(new Command {Action = CommandAction.Grip, Time = 1});
             sensorsData = Server.SendCommand(new Command { LinearVelocity = -maxSpeed, Time = 0.2 });
-            map.Update(sensorsData);
+            MapUpdate(sensorsData);
             return sensorsData;
         }
 
         public PositionSensorsData TakeClosestDetail(HashSet<string> detailsType, out DetailType detailType)
         {
+            while (!map.Details.Any())
+            {
+                Console.WriteLine("еду хуй знает куда");
+                if (knownDetails.Count != 0)
+                {                  
+                    MoveTo(knownDetails.First());                 
+                }
+                else
+                {
+                    var rnd = new Random(DateTime.Now.Millisecond);
+                  //  Console.WriteLine("еду хуй знает куда"+);
+                    MoveTo(new Point(rnd.Next(1, 6), rnd.Next(1, 4)));
+                    
+                }
+            }
             Console.WriteLine("Еду к ближайшей детали");
             detailType = DetailType.Red;
             PositionSensorsData sensorsData = null;
@@ -228,45 +315,66 @@ namespace Robot
                 Server.Exit();
             var path = pathTuple.Item2;
             var target = pathTuple.Item1.AbsoluteCoordinate;
+           
             detailType = detailTypeDictionary[pathTuple.Item1.Type];
             // поиск пути к ближайшей детали
-            MoveTo(path.Take(path.Length - 1).ToArray());
+            //if (path.Last() != Direction.No)
+             //   MoveTo(map.GetDiscretePosition(new PositionData(new Frame3D(target.X - RobotHelper.squareEdges[path.Last()].X * 2, target.Y - RobotHelper.squareEdges[path.Last()].Y * 2, 0))));
+                MoveTo(map.GetDiscretePosition(new PositionData(new Frame3D(target.X, target.Y, 0))));
             sensorsData = Take(target);
+         
             return sensorsData;
         }
 
         public PositionSensorsData MoveToClosestWall(DetailType detailType)
         {
+            while (!map.Walls.Any(wall => socketWallsDictionary[detailType].Contains(wall.Type)))
+            {
+                if (knownWalls[detailType].Count != 0)
+                {
+                    MoveTo(knownWalls[detailType].First());
+                    knownWalls[detailType].Remove(knownWalls[detailType].First());
+                }
+                else
+                {
+                    var rnd = new Random(DateTime.Now.Millisecond);
+                    MoveTo(new Point(rnd.Next(1, 6), rnd.Next(1, 4)));
+                }
+            }
+
             Console.WriteLine("Еду к нужной стене");
             PositionSensorsData sensorsData = null;
             var path = map.Walls
                 .Where(wall => socketWallsDictionary[detailType].Contains(wall.Type))
                 .SelectMany(wall =>
                 {
-                    var walls = new List<Direction[]>();
-                    walls.Add(PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition),
-                        wall.DiscreteCoordinate));
+                    var walls = new List<Tuple<Direction[],Point>>();
+                    walls.Add(Tuple.Create(PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition),
+                        wall.DiscreteCoordinate), wall.DiscreteCoordinate));
                     if (wall.Type.StartsWith("Vertical"))
                     {
                         if (wall.DiscreteCoordinate.X > 1)
-                            walls.Add(PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition),
-                                new Point(wall.DiscreteCoordinate.X - 1, wall.DiscreteCoordinate.Y)));
+                            walls.Add(Tuple.Create(PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition),
+                                new Point(wall.DiscreteCoordinate.X - 1, wall.DiscreteCoordinate.Y)), new Point(wall.DiscreteCoordinate.X-1, wall.DiscreteCoordinate.Y)));
                     }
                     else
                     {
                         if (wall.DiscreteCoordinate.Y > 1)
-                            walls.Add(PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition),
-                                new Point(wall.DiscreteCoordinate.X, wall.DiscreteCoordinate.Y - 1)));
+                            walls.Add(Tuple.Create(PathSearcher.FindPath(map, map.GetDiscretePosition(map.CurrentPosition),
+                                new Point(wall.DiscreteCoordinate.X, wall.DiscreteCoordinate.Y - 1)),  new Point(wall.DiscreteCoordinate.X, wall.DiscreteCoordinate.Y - 1)));
                     }
                     return walls;
                 })
-                .OrderBy(tuple => tuple.Length)
+                .OrderBy(tuple => tuple.Item1.Length)
                 .FirstOrDefault();
-            MoveTo(path);
+            Console.WriteLine("Сейчас поеду");
+
+            MoveTo(path.Item2);
             MoveToEdge();
             Server.SendCommand(new Command {LinearVelocity = -maxSpeed, Time = 0.2});
+            knownDetails.RemoveAt(0);
             sensorsData = Server.SendCommand(new Command {Action = CommandAction.Release, Time = 1});
-            map.Update(sensorsData);
+            MapUpdate(sensorsData);
             return sensorsData;
         }
 
@@ -294,7 +402,7 @@ namespace Robot
                         Time = (RobotHelper.VectorLength(target, Coordinate)) / maxSpeed
                     });
             
-            map.Update(sensorsData);
+            MapUpdate(sensorsData);
             return sensorsData;
         }
     }

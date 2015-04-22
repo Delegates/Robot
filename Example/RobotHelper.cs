@@ -11,6 +11,9 @@ namespace Robot
         private const int halfFieldSize = 150;
         private const int squadSize = 50;
 
+
+      
+
         public static readonly Dictionary<Direction, Point> squareEdges = new Dictionary<Direction, Point>
         {
             {Direction.Up, new Point(-squadSize/2, 0)},
